@@ -8,6 +8,7 @@ on:
       - '.github/workflows/base-build.yml'
       - 'arch/arm/configs/cactus_defconfig'
       - 'arch/arm/configs/cereus_defconfig'
+      - 'tools/dct/**'
 
 permissions:
   contents: write
