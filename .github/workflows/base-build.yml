@@ -70,8 +70,9 @@ jobs:
           rm -rf ak3/.git ak3/.github ak3/README*
           cp out/arch/arm/boot/zImage ak3/zImage
           sed -i 's|^kernel.string=.*|kernel.string=MT6765-${{ matrix.device }} base|' ak3/anykernel.sh
-          sed -i 's|^block=auto;|block=/dev/block/by-name/boot;|' ak3/anykernel.sh
           sed -i 's|^do.devicecheck=1|do.devicecheck=0|' ak3/anykernel.sh
+          sed -i 's|^block=auto;|block=$(find /dev/block -name boot 2>/dev/null \| head -n1); [ -z "$block" ] \&\& block=/dev/block/by-name/boot;|' ak3/anykernel.sh
+          grep -n '^block=' ak3/anykernel.sh
           (cd ak3 && zip -qr9 "../${ZIPNAME}" .)
           sha256sum "${ZIPNAME}" > sha256-${{ matrix.device }}.txt
           cat sha256-${{ matrix.device }}.txt
