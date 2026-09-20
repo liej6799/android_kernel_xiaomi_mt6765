@@ -31,23 +31,26 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev cpio zip unzip lib32stdc++6 lib32z1
+          sudo apt-get install -y bc bison flex libssl-dev cpio zip unzip python-is-python3
 
       - name: Cache GCC 4.9 toolchain
         uses: actions/cache@v4
         with:
           path: ~/gcc49
-          key: mt6765-gcc49-arm-linux-androideabi
+          key: mt6765-gcc49-lineage-v2
 
-      - name: Setup AOSP GCC 4.9 toolchain
+      - name: Setup GCC 4.9 toolchain (LineageOS mirror)
         run: |
-          if [ ! -d "$HOME/gcc49" ]; then
+          set -e
+          if [ ! -x "$HOME/gcc49/bin/arm-linux-androideabi-gcc" ]; then
+            rm -rf "$HOME/gcc49"
             git clone --depth 1 \
-              https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 \
+              https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9 \
               "$HOME/gcc49"
           fi
           echo "$HOME/gcc49/bin" >> "$GITHUB_PATH"
-          "$HOME/gcc49/bin/arm-linux-androideabi-gcc" --version | head -1
+          arm-linux-androideabi-gcc --version 2>&1 | head -1
+          arm-linux-androideabi-gcc -v 2>&1 | tail -1
 
       - name: Build kernel
         run: |
