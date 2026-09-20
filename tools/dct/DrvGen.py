@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 # -*- coding: utf-8 -*-
 
 # Copyright (C) 2016 MediaTek Inc.
@@ -41,6 +41,9 @@ from obj.ChipObj import MT6779
 
 from utility.util import LogLevel
 from utility.util import log
+
+def cmp(a, b):
+    return bool(a > b) - bool(a < b)
 
 def usage():
     print ('''
