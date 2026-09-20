@@ -71,8 +71,20 @@ jobs:
           cp out/arch/arm/boot/zImage ak3/zImage
           sed -i 's|^kernel.string=.*|kernel.string=MT6765-${{ matrix.device }} base|' ak3/anykernel.sh
           sed -i 's|^do.devicecheck=1|do.devicecheck=0|' ak3/anykernel.sh
-          sed -i 's|^block=auto;|block=$(find /dev/block -name boot 2>/dev/null \| head -n1); [ -z "$block" ] \&\& block=/dev/block/by-name/boot;|' ak3/anykernel.sh
-          grep -n '^block=' ak3/anykernel.sh
+          python3 - <<'EOF'
+          import re
+          p = 'ak3/anykernel.sh'
+          s = open(p).read()
+          s = re.sub(r'^BLOCK=.*$',
+                     'BLOCK=$(find /dev/block -name boot 2>/dev/null | head -n1); [ -z "$BLOCK" ] && BLOCK=/dev/block/by-name/boot;',
+                     s, flags=re.M)
+          s = re.sub(r'# boot install.*$',
+                     '# boot install\ndump_boot;\nwrite_boot;\n',
+                     s, flags=re.S)
+          open(p, 'w').write(s)
+          EOF
+          grep -nE '^BLOCK=|^dump_boot|^write_boot' ak3/anykernel.sh
+          sh -n ak3/anykernel.sh && echo "anykernel.sh syntax OK"
           (cd ak3 && zip -qr9 "../${ZIPNAME}" .)
           sha256sum "${ZIPNAME}" > sha256-${{ matrix.device }}.txt
           cat sha256-${{ matrix.device }}.txt
