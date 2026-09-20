@@ -1,0 +1,94 @@
+name: Build Base MT6765 Kernel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [lineage-17.1]
+    paths:
+      - '.github/workflows/base-build.yml'
+      - 'arch/arm/configs/cactus_defconfig'
+      - 'arch/arm/configs/cereus_defconfig'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [cereus, cactus]
+
+    steps:
+      - name: Checkout kernel source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev cpio zip unzip lib32stdc++6 lib32z1
+
+      - name: Cache GCC 4.9 toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/gcc49
+          key: mt6765-gcc49-arm-linux-androideabi
+
+      - name: Setup AOSP GCC 4.9 toolchain
+        run: |
+          if [ ! -d "$HOME/gcc49" ]; then
+            git clone --depth 1 \
+              https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 \
+              "$HOME/gcc49"
+          fi
+          echo "$HOME/gcc49/bin" >> "$GITHUB_PATH"
+          "$HOME/gcc49/bin/arm-linux-androideabi-gcc" --version | head -1
+
+      - name: Build kernel
+        run: |
+          make O=out ARCH=arm CROSS_COMPILE="$HOME/gcc49/bin/arm-linux-androideabi-" \
+               ${{ matrix.device }}_defconfig
+          make -j"$(nproc)" O=out ARCH=arm \
+               CROSS_COMPILE="$HOME/gcc49/bin/arm-linux-androideabi-"
+          ls -la out/arch/arm/boot/zImage
+          grep -E "UTS_VERSION|LINUX_COMPILER" out/include/generated/compile.h
+
+      - name: Package AnyKernel3 zip
+        run: |
+          DATE=$(date -u +%Y%m%d)
+          ZIPNAME="mt6765-${{ matrix.device }}-base-${DATE}.zip"
+          git clone --depth 1 https://github.com/osm0sis/AnyKernel3 ak3
+          rm -rf ak3/.git ak3/.github ak3/README*
+          cp out/arch/arm/boot/zImage ak3/zImage
+          sed -i 's|^kernel.string=.*|kernel.string=MT6765-${{ matrix.device }} base|' ak3/anykernel.sh
+          sed -i 's|^block=auto;|block=/dev/block/by-name/boot;|' ak3/anykernel.sh
+          sed -i 's|^do.devicecheck=1|do.devicecheck=0|' ak3/anykernel.sh
+          (cd ak3 && zip -qr9 "../${ZIPNAME}" .)
+          sha256sum "${ZIPNAME}" > sha256-${{ matrix.device }}.txt
+          cat sha256-${{ matrix.device }}.txt
+          echo "ZIPNAME=${ZIPNAME}" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIPNAME }}
+          path: ${{ env.ZIPNAME }}
+
+      - name: Create release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: base-${{ matrix.device }}-${{ github.run_number }}
+          name: ${{ env.ZIPNAME }}
+          body: |
+            Base (unmodified) build of lineage-17.1 source for ${{ matrix.device }}.
+
+            - Source: ${{ github.sha }}
+            - Toolchain: AOSP arm-linux-androideabi GCC 4.9 (same as stock/Lineage)
+          files: |
+            ${{ env.ZIPNAME }}
+            sha256-${{ matrix.device }}.txt
