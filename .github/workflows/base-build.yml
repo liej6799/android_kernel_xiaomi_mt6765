@@ -99,12 +99,16 @@ jobs:
           sed -i 's|crc_bypass=wmt_drv,bt_drv"|crc_bypass=wmt_drv,wmt_chrdev_wifi"|' ak3/anykernel.sh
           PAIRZIP="${ZIPNAME/-base-/-base-wmt-wifi-}"
           (cd ak3 && zip -qr9 "../${PAIRZIP}" .)
+          sed -i 's|crc_bypass=wmt_drv,wmt_chrdev_wifi"|crc_bypass=wmt_drv,wmt_chrdev_wifi,wlan_drv_gen4m,bt_drv"|' ak3/anykernel.sh
+          CONNECTZIP="${ZIPNAME/-base-/-base-connectivity-}"
+          (cd ak3 && zip -qr9 "../${CONNECTZIP}" .)
           sha256sum "${ZIPNAME}" > "sha256-${{ matrix.device }}.txt"
-          cp "${ZIPNAME}" "${WMTZIP}" "${BTZIP}" "${PAIRZIP}" "sha256-${{ matrix.device }}.txt" ..
+          cp "${ZIPNAME}" "${WMTZIP}" "${BTZIP}" "${PAIRZIP}" "${CONNECTZIP}" "sha256-${{ matrix.device }}.txt" ..
           echo "ZIPNAME=${ZIPNAME}" >> "$GITHUB_ENV"
           echo "WMTZIP=${WMTZIP}" >> "$GITHUB_ENV"
           echo "BTZIP=${BTZIP}" >> "$GITHUB_ENV"
           echo "PAIRZIP=${PAIRZIP}" >> "$GITHUB_ENV"
+          echo "CONNECTZIP=${CONNECTZIP}" >> "$GITHUB_ENV"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -124,6 +128,7 @@ jobs:
             - `base-wmt` zip: bypass CRCs for `wmt_drv` only
             - `base-wmt-bt` zip: bypass CRCs for `wmt_drv` and `bt_drv`
             - `base-wmt-wifi` zip: bypass CRCs for `wmt_drv` and `wmt_chrdev_wifi`
+            - `base-connectivity` zip: enable all WMT, Bluetooth, and WLAN modules
 
             - Source: ${{ github.sha }}
             - Toolchain: AOSP arm-linux-androideabi GCC 4.9
@@ -132,4 +137,5 @@ jobs:
             ${{ env.WMTZIP }}
             ${{ env.BTZIP }}
             ${{ env.PAIRZIP }}
+            ${{ env.CONNECTZIP }}
             sha256-${{ matrix.device }}.txt

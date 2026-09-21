@@ -3551,9 +3551,6 @@ struct wiphy {
 
 	struct list_head wdev_list;
 
-	/* the network namespace this phy lives in currently */
-	possible_net_t _net;
-
 #ifdef CONFIG_CFG80211_WEXT
 	const struct iw_handler_def *wext;
 #endif
@@ -3572,6 +3569,9 @@ struct wiphy {
 	u32 bss_select_support;
 
 	u64 cookie_counter;
+
+	/* Keep namespace state in alignment padding to preserve the stock ABI. */
+	possible_net_t _net;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };

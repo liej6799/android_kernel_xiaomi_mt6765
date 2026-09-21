@@ -1862,8 +1862,6 @@ struct net_device {
 	struct netpoll_info __rcu	*npinfo;
 #endif
 
-	possible_net_t			nd_net;
-
 	/* mid-layer private */
 	union {
 		void					*ml_priv;
@@ -1905,6 +1903,9 @@ struct net_device {
 	struct lock_class_key	*qdisc_tx_busylock;
 	struct lock_class_key	*qdisc_running_key;
 	bool			proto_down;
+
+	/* Keep namespace state in tail padding to preserve the stock ABI. */
+	possible_net_t			nd_net;
 };
 #define to_net_dev(d) container_of(d, struct net_device, dev)
 
