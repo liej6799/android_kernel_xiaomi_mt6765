@@ -93,10 +93,10 @@ jobs:
           sed -i 's|^write_boot;|patch_cmdline crc_bypass "crc_bypass=wmt_drv";\nwrite_boot;|' ak3/anykernel.sh
           WMTZIP="${ZIPNAME/-base-/-base-wmt-}"
           (cd ak3 && zip -qr9 "../${WMTZIP}" .)
-          sed -i 's|crc_bypass=wmt_drv"|crc_bypass=wmt_drv,bt_drv_6765"|' ak3/anykernel.sh
+          sed -i 's|crc_bypass=wmt_drv"|crc_bypass=wmt_drv,bt_drv"|' ak3/anykernel.sh
           BTZIP="${ZIPNAME/-base-/-base-wmt-bt-}"
           (cd ak3 && zip -qr9 "../${BTZIP}" .)
-          sed -i 's|crc_bypass=wmt_drv,bt_drv_6765"|crc_bypass=wmt_drv,wmt_chrdev_wifi"|' ak3/anykernel.sh
+          sed -i 's|crc_bypass=wmt_drv,bt_drv"|crc_bypass=wmt_drv,wmt_chrdev_wifi"|' ak3/anykernel.sh
           PAIRZIP="${ZIPNAME/-base-/-base-wmt-wifi-}"
           (cd ak3 && zip -qr9 "../${PAIRZIP}" .)
           sha256sum "${ZIPNAME}" > "sha256-${{ matrix.device }}.txt"
@@ -122,7 +122,7 @@ jobs:
 
             - Default zip: strict module CRC checking (known to boot)
             - `base-wmt` zip: bypass CRCs for `wmt_drv` only
-            - `base-wmt-bt` zip: bypass CRCs for `wmt_drv` and `bt_drv_6765`
+            - `base-wmt-bt` zip: bypass CRCs for `wmt_drv` and `bt_drv`
             - `base-wmt-wifi` zip: bypass CRCs for `wmt_drv` and `wmt_chrdev_wifi`
 
             - Source: ${{ github.sha }}
