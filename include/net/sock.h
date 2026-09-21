@@ -181,12 +181,12 @@ struct sock_common {
 		struct hlist_node	skc_portaddr_node;
 	};
 	struct proto		*skc_prot;
-	possible_net_t		skc_net;
 
 #if IS_ENABLED(CONFIG_IPV6)
 	struct in6_addr		skc_v6_daddr;
 	struct in6_addr		skc_v6_rcv_saddr;
 #endif
+	possible_net_t		skc_net;
 
 	atomic64_t		skc_cookie;
 
