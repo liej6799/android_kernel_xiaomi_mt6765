@@ -929,10 +929,6 @@ struct user_struct {
 #ifdef CONFIG_EPOLL
 	atomic_long_t epoll_watches; /* The number of file descriptors currently watched */
 #endif
-#ifdef CONFIG_POSIX_MQUEUE
-	/* protected by mq_lock	*/
-	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
-#endif
 	unsigned long locked_shm; /* How many pages of mlocked shm ? */
 	unsigned long unix_inflight;	/* How many files in flight in unix sockets */
 	atomic_long_t pipe_bufs;  /* how many pages are allocated in pipe buffers */
@@ -948,6 +944,11 @@ struct user_struct {
 
 #if defined(CONFIG_PERF_EVENTS) || defined(CONFIG_BPF_SYSCALL)
 	atomic_long_t locked_vm;
+#endif
+#ifdef CONFIG_POSIX_MQUEUE
+	/* kept at the end so field offsets match the stock kernel
+	 * (stock has CONFIG_POSIX_MQUEUE off) for vendor modules */
+	unsigned long mq_bytes;	/* How many bytes can be allocated to mqueue? */
 #endif
 };
 
@@ -2028,11 +2029,6 @@ struct task_struct {
 				     - initialized normally by setup_new_exec */
 /* file system info */
 	struct nameidata *nameidata;
-#ifdef CONFIG_SYSVIPC
-/* ipc stuff */
-	struct sysv_sem sysvsem;
-	struct sysv_shm sysvshm;
-#endif
 #ifdef CONFIG_DETECT_HUNG_TASK
 /* hung task detection */
 	unsigned long last_switch_count;
@@ -2334,6 +2330,12 @@ struct task_struct {
  *
  * Do not put anything below here!
  */
+#ifdef CONFIG_SYSVIPC
+/* ipc stuff - kept at the very end so all existing field offsets stay
+ * identical to the stock kernel for prebuilt vendor modules */
+	struct sysv_sem sysvsem;
+	struct sysv_shm sysvshm;
+#endif
 };
 
 #ifdef CONFIG_ARCH_WANTS_DYNAMIC_TASK_STRUCT
