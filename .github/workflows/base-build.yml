@@ -80,10 +80,13 @@ jobs:
 
       - name: Build kernel (with built-in WMT/WLAN)
         working-directory: kernel
+        env:
+          TOP: ${{ github.workspace }}
         run: |
           make O=out ARCH=arm CROSS_COMPILE="$HOME/gcc49/bin/arm-linux-androideabi-" \
                ${{ matrix.device }}_defconfig
-          make -j"$(nproc)" O=out ARCH=arm KCFLAGS="-Wno-error" \
+          make -j"$(nproc)" O=out ARCH=arm \
+               KCFLAGS="-Wno-error -DMTK_WCN_REMOVE_KERNEL_MODULE -DMTK_WCN_BUILT_IN_DRIVER" \
                CROSS_COMPILE="$HOME/gcc49/bin/arm-linux-androideabi-"
           ls -la out/arch/arm/boot/zImage
           grep -E "UTS_VERSION|LINUX_COMPILER" out/include/generated/compile.h

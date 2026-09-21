@@ -97,6 +97,7 @@ typedef void (*wmt_func_ctrl_cb) (unsigned int, unsigned int);
 typedef signed long (*wmt_thermal_query_cb) (void);
 typedef int (*wmt_deep_idle_ctrl_cb) (unsigned int);
 typedef int (*wmt_func_do_reset) (unsigned int);
+typedef int (*wmt_trigger_assert_cb) (void);
 
 /* for DVFS driver do 1v autok */
 #if MTK_WCN_CMB_FOR_SDIO_1V_AUTOK
@@ -124,6 +125,7 @@ struct _CMB_STUB_CB_ {
 	wmt_thermal_query_cb thermal_query_cb;
 	wmt_deep_idle_ctrl_cb deep_idle_ctrl_cb;
 	wmt_func_do_reset wmt_do_reset_cb;
+	wmt_trigger_assert_cb trigger_assert_cb;
 #if MTK_WCN_CMB_FOR_SDIO_1V_AUTOK
 	wmt_get_drv_status get_drv_status_cb;
 #endif
