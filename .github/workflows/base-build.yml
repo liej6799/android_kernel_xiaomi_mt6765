@@ -9,9 +9,13 @@ on:
       - 'arch/arm/configs/cactus_defconfig'
       - 'arch/arm/configs/cereus_defconfig'
       - 'tools/dct/**'
+      - 'net/Makefile'
 
 permissions:
   contents: write
+
+env:
+  WMT_TAG: MMI-W3WYS36.54-12-5-1
 
 jobs:
   build:
@@ -28,6 +32,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          path: kernel
+
+      - name: Checkout MediaTek connectivity module sources (wmt_drv/wlan gen4m)
+        run: |
+          VENDOR=vendor/mediatek/kernel_modules/connectivity
+          mkdir -p "$VENDOR/wlan/core"
+          git clone --depth 1 --branch "$WMT_TAG" \
+            https://github.com/MotorolaMobilityLLC/vendor-mediatek-kernel_modules-connectivity-common \
+            "$VENDOR/common"
+          git clone --depth 1 --branch "$WMT_TAG" \
+            https://github.com/MotorolaMobilityLLC/vendor-mediatek-kernel_modules-connectivity-wlan-adaptor \
+            "$VENDOR/wlan/adaptor"
+          git clone --depth 1 --branch "$WMT_TAG" \
+            https://github.com/MotorolaMobilityLLC/vendor-mediatek-kernel_modules-connectivity-wlan-core-gen4m \
+            "$VENDOR/wlan/core/gen4m"
 
       - name: Install build dependencies
         run: |
@@ -51,9 +70,9 @@ jobs:
           fi
           echo "$HOME/gcc49/bin" >> "$GITHUB_PATH"
           arm-linux-androideabi-gcc --version 2>&1 | head -1
-          arm-linux-androideabi-gcc -v 2>&1 | tail -1
 
-      - name: Build kernel
+      - name: Build kernel (with built-in WMT/WLAN)
+        working-directory: kernel
         run: |
           make O=out ARCH=arm CROSS_COMPILE="$HOME/gcc49/bin/arm-linux-androideabi-" \
                ${{ matrix.device }}_defconfig
@@ -63,6 +82,7 @@ jobs:
           grep -E "UTS_VERSION|LINUX_COMPILER" out/include/generated/compile.h
 
       - name: Package AnyKernel3 zip
+        working-directory: kernel
         run: |
           DATE=$(date -u +%Y%m%d)
           ZIPNAME="mt6765-${{ matrix.device }}-base-${DATE}.zip"
@@ -83,11 +103,10 @@ jobs:
                      s, flags=re.S)
           open(p, 'w').write(s)
           EOF
-          grep -nE '^BLOCK=|^dump_boot|^write_boot' ak3/anykernel.sh
           sh -n ak3/anykernel.sh && echo "anykernel.sh syntax OK"
           (cd ak3 && zip -qr9 "../${ZIPNAME}" .)
-          sha256sum "${ZIPNAME}" > sha256-${{ matrix.device }}.txt
-          cat sha256-${{ matrix.device }}.txt
+          sha256sum "${ZIPNAME}" > "sha256-${{ matrix.device }}.txt"
+          cp "${ZIPNAME}" "sha256-${{ matrix.device }}.txt" ..
           echo "ZIPNAME=${ZIPNAME}" >> "$GITHUB_ENV"
 
       - name: Upload artifact
@@ -102,10 +121,11 @@ jobs:
           tag_name: base-${{ matrix.device }}-${{ github.run_number }}
           name: ${{ env.ZIPNAME }}
           body: |
-            Base (unmodified) build of lineage-17.1 source for ${{ matrix.device }}.
+            DroidSpaces build for ${{ matrix.device }} with built-in WMT + WLAN gen4m (CONNAC).
 
             - Source: ${{ github.sha }}
-            - Toolchain: AOSP arm-linux-androideabi GCC 4.9 (same as stock/Lineage)
+            - Toolchain: AOSP arm-linux-androideabi GCC 4.9
+            - Vendor connectivity: Motorola OSS drop ${{ env.WMT_TAG }}
           files: |
             ${{ env.ZIPNAME }}
             sha256-${{ matrix.device }}.txt
