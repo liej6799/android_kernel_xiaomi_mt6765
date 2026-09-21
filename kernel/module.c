@@ -1276,9 +1276,6 @@ static unsigned long maybe_relocated(unsigned long crc,
  * An empty list (the default) keeps strict checking for everything.
  */
 static char crc_bypass[MODULE_NAME_LEN * 4];
-/* Prevent a bad WLAN ABI from causing an unrecoverable boot loop. */
-static bool wlan_crc_bypass_enabled;
-core_param(wlan_crc_bypass, wlan_crc_bypass_enabled, bool, 0600);
 
 static int __init set_crc_bypass(char *str)
 {
@@ -1295,12 +1292,8 @@ static bool crc_bypass_module(const char *name)
 	while (*p) {
 		next = strchr(p, ',');
 		len = next ? next - p : strlen(p);
-		if (len == name_len && strncmp(p, name, len) == 0) {
-			if (!strcmp(name, "wlan_drv_gen4m") &&
-			    !wlan_crc_bypass_enabled)
-				return false;
+		if (len == name_len && strncmp(p, name, len) == 0)
 			return true;
-		}
 		if (!next)
 			break;
 		p = next + 1;
