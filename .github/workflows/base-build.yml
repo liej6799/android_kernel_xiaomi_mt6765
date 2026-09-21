@@ -87,10 +87,20 @@ jobs:
           open(p, 'w').write(s)
           EOF
           sh -n ak3/anykernel.sh && echo "anykernel.sh syntax OK"
+          # default zip: no crc_bypass cmdline -> strict module CRCs (safe boot)
           (cd ak3 && zip -qr9 "../${ZIPNAME}" .)
+          # diagnostic variants: add the runtime CRC allowlist to the boot cmdline
+          sed -i 's|^write_boot;|patch_cmdline crc_bypass "crc_bypass=wmt_drv";\nwrite_boot;|' ak3/anykernel.sh
+          WMTZIP="${ZIPNAME/-base-/-base-wmt-}"
+          (cd ak3 && zip -qr9 "../${WMTZIP}" .)
+          sed -i 's|crc_bypass=wmt_drv"|crc_bypass=wmt_drv,wmt_chrdev_wifi"|' ak3/anykernel.sh
+          PAIRZIP="${ZIPNAME/-base-/-base-wmt-wifi-}"
+          (cd ak3 && zip -qr9 "../${PAIRZIP}" .)
           sha256sum "${ZIPNAME}" > "sha256-${{ matrix.device }}.txt"
-          cp "${ZIPNAME}" "sha256-${{ matrix.device }}.txt" ..
+          cp "${ZIPNAME}" "${WMTZIP}" "${PAIRZIP}" "sha256-${{ matrix.device }}.txt" ..
           echo "ZIPNAME=${ZIPNAME}" >> "$GITHUB_ENV"
+          echo "WMTZIP=${WMTZIP}" >> "$GITHUB_ENV"
+          echo "PAIRZIP=${PAIRZIP}" >> "$GITHUB_ENV"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -104,10 +114,16 @@ jobs:
           tag_name: base-${{ matrix.device }}-${{ github.run_number }}
           name: ${{ env.ZIPNAME }}
           body: |
-            DroidSpaces build for ${{ matrix.device }} with built-in WMT + WLAN gen4m (CONNAC).
+            DroidSpaces diagnostic build for ${{ matrix.device }}.
+
+            - Default zip: strict module CRC checking (known to boot)
+            - `base-wmt` zip: bypass CRCs for `wmt_drv` only
+            - `base-wmt-wifi` zip: bypass CRCs for `wmt_drv` and `wmt_chrdev_wifi`
 
             - Source: ${{ github.sha }}
             - Toolchain: AOSP arm-linux-androideabi GCC 4.9
           files: |
             ${{ env.ZIPNAME }}
+            ${{ env.WMTZIP }}
+            ${{ env.PAIRZIP }}
             sha256-${{ matrix.device }}.txt

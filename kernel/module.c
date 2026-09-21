@@ -1269,25 +1269,35 @@ static unsigned long maybe_relocated(unsigned long crc,
 }
 
 /*
- * DroidSpaces custom kernel: the prebuilt connectivity modules were
- * built against the stock kernel.  The container config options change
- * genksyms CRCs without affecting the function ABI these drivers use,
- * so their CRCs are bypassed.  All other vendor modules (modem, ccci,
- * ...) keep strict CRC checking.
+ * Select modules allowed to bypass CRC checking at runtime so prebuilt
+ * connectivity modules can be tested one at a time against this kernel.
+ * Pass the allowlist on the kernel command line, e.g.:
+ *	crc_bypass=wmt_drv,wlan_drv_gen4m
+ * An empty list (the default) keeps strict checking for everything.
  */
+static char crc_bypass[MODULE_NAME_LEN * 4];
+
+static int __init set_crc_bypass(char *str)
+{
+	strlcpy(crc_bypass, str, sizeof(crc_bypass));
+	return 1;
+}
+__setup("crc_bypass=", set_crc_bypass);
+
 static bool crc_bypass_module(const char *name)
 {
-	static const char * const allowed[] = {
-		"wmt_drv",
-		"wmt_chrdev_wifi",
-		"wlan_drv_gen4m",
-		NULL,
-	};
-	int i;
+	const char *next, *p = crc_bypass;
+	size_t len, name_len = strlen(name);
 
-	for (i = 0; allowed[i]; i++)
-		if (strcmp(name, allowed[i]) == 0)
+	while (*p) {
+		next = strchr(p, ',');
+		len = next ? next - p : strlen(p);
+		if (len == name_len && strncmp(p, name, len) == 0)
 			return true;
+		if (!next)
+			break;
+		p = next + 1;
+	}
 	return false;
 }
 
