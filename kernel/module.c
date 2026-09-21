@@ -1268,6 +1268,29 @@ static unsigned long maybe_relocated(unsigned long crc,
 	return crc;
 }
 
+/*
+ * DroidSpaces custom kernel: the prebuilt connectivity modules were
+ * built against the stock kernel.  The container config options change
+ * genksyms CRCs without affecting the function ABI these drivers use,
+ * so their CRCs are bypassed.  All other vendor modules (modem, ccci,
+ * ...) keep strict CRC checking.
+ */
+static bool crc_bypass_module(const char *name)
+{
+	static const char * const allowed[] = {
+		"wmt_drv",
+		"wmt_chrdev_wifi",
+		"wlan_drv_gen4m",
+		NULL,
+	};
+	int i;
+
+	for (i = 0; allowed[i]; i++)
+		if (strcmp(name, allowed[i]) == 0)
+			return true;
+	return false;
+}
+
 static int check_version(Elf_Shdr *sechdrs,
 			 unsigned int versindex,
 			 const char *symname,
@@ -1280,6 +1303,9 @@ static int check_version(Elf_Shdr *sechdrs,
 
 	/* Exporting module didn't supply crcs?  OK, we're already tainted. */
 	if (!crc)
+		return 1;
+
+	if (crc_bypass_module(mod->name))
 		return 1;
 
 	/* No versions at all?  modprobe --force does this. */
