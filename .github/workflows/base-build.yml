@@ -55,6 +55,17 @@ jobs:
           ln -sfn "$GITHUB_WORKSPACE/$VENDOR/wlan/core/gen4m" wlan_drv_gen4m
           ls -la
 
+      - name: Patch vendor sources for built-in compile
+        run: |
+          V="$GITHUB_WORKSPACE/vendor/mediatek/kernel_modules/connectivity"
+          # enable the built-in switch in wmt_drv's own Kbuild
+          sed -i 's|^#ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE|ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE|' \
+            "$V/common/Kbuild"
+          # drop -Werror (AOSP GCC 4.9 false positives, e.g. {0} initializers)
+          sed -i 's|^ccflags-y += -Werror |ccflags-y += |' \
+            "$V/common/Kbuild" \
+            "$V/wlan/core/gen4m/Makefile"
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
