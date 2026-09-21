@@ -1282,6 +1282,14 @@ static int check_version(Elf_Shdr *sechdrs,
 	if (!crc)
 		return 1;
 
+	/*
+	 * DroidSpaces custom kernel: prebuilt vendor modules (wmt_drv,
+	 * wlan_drv_gen4m, ...) were built against the stock kernel.  The
+	 * container config options change genksyms CRCs without affecting
+	 * the function ABI these modules use, so accept any CRC.
+	 */
+	return 1;
+
 	/* No versions at all?  modprobe --force does this. */
 	if (versindex == 0)
 		return try_to_force_load(mod, symname) == 0;

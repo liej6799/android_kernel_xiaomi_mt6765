@@ -15,7 +15,6 @@ permissions:
   contents: write
 
 env:
-  WMT_TAG: MMI-W3WYS36.54-12-5-1
 
 jobs:
   build:
@@ -33,38 +32,6 @@ jobs:
         with:
           fetch-depth: 1
           path: kernel
-
-      - name: Checkout MediaTek connectivity module sources (wmt_drv/wlan gen4m)
-        run: |
-          VENDOR=vendor/mediatek/kernel_modules/connectivity
-          mkdir -p "$VENDOR/wlan/core"
-          git clone --depth 1 --branch "$WMT_TAG" \
-            https://github.com/MotorolaMobilityLLC/vendor-mediatek-kernel_modules-connectivity-common \
-            "$VENDOR/common"
-          git clone --depth 1 --branch "$WMT_TAG" \
-            https://github.com/MotorolaMobilityLLC/vendor-mediatek-kernel_modules-connectivity-wlan-adaptor \
-            "$VENDOR/wlan/adaptor"
-          git clone --depth 1 --branch "$WMT_TAG" \
-            https://github.com/MotorolaMobilityLLC/vendor-mediatek-kernel_modules-connectivity-wlan-core-gen4m \
-            "$VENDOR/wlan/core/gen4m"
-          # Pre-create the symlinks the kernel Makefile expects (its own
-          # $(shell ln -s ...) runs with an unset srctree in CI)
-          cd kernel/drivers/misc/mediatek/connectivity
-          ln -sfn "$GITHUB_WORKSPACE/$VENDOR/common" wmt_drv
-          ln -sfn "$GITHUB_WORKSPACE/$VENDOR/wlan/adaptor" wmt_chrdev_wifi
-          ln -sfn "$GITHUB_WORKSPACE/$VENDOR/wlan/core/gen4m" wlan_drv_gen4m
-          ls -la
-
-      - name: Patch vendor sources for built-in compile
-        run: |
-          V="$GITHUB_WORKSPACE/vendor/mediatek/kernel_modules/connectivity"
-          # enable the built-in switch in wmt_drv's own Kbuild
-          sed -i 's|^#ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE|ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE|' \
-            "$V/common/Kbuild"
-          # drop -Werror (AOSP GCC 4.9 false positives, e.g. {0} initializers)
-          sed -i 's|^ccflags-y += -Werror |ccflags-y += |' \
-            "$V/common/Kbuild" \
-            "$V/wlan/core/gen4m/Makefile"
 
       - name: Install build dependencies
         run: |
@@ -89,15 +56,12 @@ jobs:
           echo "$HOME/gcc49/bin" >> "$GITHUB_PATH"
           arm-linux-androideabi-gcc --version 2>&1 | head -1
 
-      - name: Build kernel (with built-in WMT/WLAN)
+      - name: Build kernel
         working-directory: kernel
-        env:
-          TOP: ${{ github.workspace }}
         run: |
           make O=out ARCH=arm CROSS_COMPILE="$HOME/gcc49/bin/arm-linux-androideabi-" \
                ${{ matrix.device }}_defconfig
-          make -j"$(nproc)" O=out ARCH=arm \
-               KCFLAGS="-Wno-error -DMTK_WCN_REMOVE_KERNEL_MODULE -DMTK_WCN_BUILT_IN_DRIVER" \
+          make -j"$(nproc)" O=out ARCH=arm KCFLAGS="-Wno-error" \
                CROSS_COMPILE="$HOME/gcc49/bin/arm-linux-androideabi-"
           ls -la out/arch/arm/boot/zImage
           grep -E "UTS_VERSION|LINUX_COMPILER" out/include/generated/compile.h
@@ -146,7 +110,6 @@ jobs:
 
             - Source: ${{ github.sha }}
             - Toolchain: AOSP arm-linux-androideabi GCC 4.9
-            - Vendor connectivity: Motorola OSS drop ${{ env.WMT_TAG }}
           files: |
             ${{ env.ZIPNAME }}
             sha256-${{ matrix.device }}.txt

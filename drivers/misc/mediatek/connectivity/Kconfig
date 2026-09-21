@@ -3,15 +3,6 @@ config MTK_COMBO
 	help
 	  MTK connectivity combo chip driver for MT66xx
 
-config WLAN_DRV_BUILD_IN
-	bool "Build WMT/WLAN connectivity drivers into the kernel"
-	depends on MTK_COMBO
-	default n
-	help
-	  Symlink vendor/mediatek/kernel_modules/connectivity sources
-	  (wmt_drv, wmt_chrdev_wifi, wlan_drv_gen4m) into the tree and
-	  build them built-in instead of shipping them as modules.
-
 #
 # MTK Combo Chip Selection
 #
